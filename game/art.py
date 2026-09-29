@@ -11,23 +11,48 @@ PALETTE = [
     0x78B7EA, 0x5C68AC, 0xF4BEA1, 0xD8EBC8,
 ]
 
-# 每个字符代表一个像素，十六进制数字对应调色板；点表示透明。
+# 星奈 SENA：原创 Q 版校园少女。每个字符是一格像素。
+# 16 像素宽的身体，加上两侧发尾，最终组成 24 × 32 的角色。
+# 十六进制数字对应调色板，点表示透明。
 STUDENT = (
-    "......0000......",
-    ".....044440.....",
-    "....04444440....",
-    "....04444440....",
-    "....0eeeeee0....",
-    "....0e7ee7e0....",
-    "....0eeeeee0....",
-    ".....0eeee0.....",
-    "....08888880....",
-    "...0888988880...",
-    "...0e888888e0...",
-    "...0e888888e0...",
-    "....08888880....",
-    ".....066660.....",
-    ".....066660.....",
+    ".....000000.....",
+    "...00dddddd00...",
+    "..0ddccccdddd0..",
+    ".0ddccccdddddd0.",
+    ".0ddcddddddddd0.",
+    "0ddddeeeeeddddd0",
+    "0dddeeeeeeeeddd0",
+    "0dde00eeee00edd0",
+    "0dde7ceeee7cedd0",
+    "0ddec0eeeec0edd0",
+    "0ddecceeeeccedd0",
+    "0ddee8eeee8eedd0",
+    ".0ddeee88eeedd0.",
+    "..0ddeeeeeedd0..",
+    "...00eeeeee00...",
+    ".....077770.....",
+    "....07777770....",
+    "...0773773770...",
+    "...0777337770...",
+    "...0777887770...",
+    "..0e77788777e0..",
+    "..0e77788777e0..",
+    "...0e777777e0...",
+    "....0dddddd0....",
+    "...0ddcddcdd0...",
+    "..0ddcddddcdd0..",
+    "..000000000000..",
+    ".....ee..ee.....",
+    ".....ee..ee.....",
+    ".....33..33.....",
+    ".....77..77.....",
+    "....000..000....",
+)
+
+PIGTAIL = (
+    "0880", "0880", "0dd0", "0dc0", "0dc0", "0dc0",
+    "0dd0", "0dd0", "0dc0", "0dc0", "0dc0", "0dd0",
+    "0dd0", "0dd0", "0dd0", "0dd0", ".0d0", ".0d0", "..00",
 )
 
 # 5 × 7 字体，用于标题。普通说明继续使用 Pyxel 自带的小字体。
@@ -107,21 +132,68 @@ def panel(x, y, width, height, color=0, border=3):
     pyxel.pset(x + width - 2, y + 1, 6)
 
 
-def character(x, y, frame=0, moving=False, facing=1, scale=1):
-    bob = int(moving and frame % 16 < 8)
-    for row, pixels in enumerate(STUDENT):
-        for col, pixel in enumerate(pixels):
+def character_pixels(frame=0, moving=False, facing=1, expression="normal"):
+    """合成一帧像素，用同一份数据绘制游戏角色和放大预览。"""
+    canvas = [["."] * 24 for _ in range(32)]
+    sway = int((frame // (10 if moving else 45)) % 2 == 1)
+    # 发尾是独立一层：末端轻轻内摆，移动时再上下摆动一格。
+    for side in (0, 20):
+        for row, strip in enumerate(PIGTAIL):
+            inward = sway if row > 7 else 0
+            offset = inward if side == 0 else -inward
+            ty = 4 + row + int(moving and row > 8 and frame % 12 < 6)
+            for col, pixel in enumerate(strip):
+                if pixel != ".":
+                    canvas[ty][side + col + offset] = pixel
+    for row, strip in enumerate(STUDENT):
+        for col, pixel in enumerate(strip):
             if pixel != ".":
-                dx = col if facing >= 0 else 15 - col
-                pyxel.rect(x + dx * scale, y + (row - bob) * scale,
+                # 身体位于两条发尾之间。
+                canvas[row][col + 4] = pixel
+
+    # 只重画小腿和鞋子；裙摆与上半身使用同一张基础图。
+    for row in range(27, 32):
+        for col in range(8, 16):
+            canvas[row][col] = "."
+    phase = (frame // 6) % 4
+    legs = (
+        (9 - int(moving and phase == 1), int(moving and phase < 2)),
+        (13 + int(moving and phase == 3), int(moving and phase >= 2)),
+    )
+    for x, lift in legs:
+        for row in range(27, 31 - lift):
+            color = ("e", "e", "3", "7")[row - 27]
+            canvas[row][x] = canvas[row][x + 1] = color
+        for col in range(x - 1, x + 2):
+            canvas[31 - lift][col] = "0"
+
+    blink = not moving and 166 <= frame % 180 < 175
+    if blink or expression == "hurt":
+        for x in (8, 14):
+            for row in range(7, 11):
+                canvas[row][x] = canvas[row][x + 1] = "e"
+            canvas[9][x] = canvas[9][x + 1] = "0"
+    elif expression == "dash":
+        for x in (8, 14):
+            canvas[7][x] = "d"
+            canvas[8][x + 1] = "0"
+
+    if facing < 0:
+        canvas = [row[::-1] for row in canvas]
+    return tuple("".join(row) for row in canvas)
+
+
+def character(x, y, frame=0, moving=False, facing=1, scale=1, expression="normal"):
+    # x、y 仍使用原有 16 × 20 的角色定位。较大的头发、脸部向上扩展。
+    # 角色脚底对齐地面；玩法中的身体碰撞区域由 main.py 单独决定。
+    origin_x = x - 4 * scale
+    bob = int(moving and frame % 12 < 6)
+    origin_y = y - (12 + bob) * scale
+    for row, strip in enumerate(character_pixels(frame, moving, facing, expression)):
+        for col, pixel in enumerate(strip):
+            if pixel != ".":
+                pyxel.rect(origin_x + col * scale, origin_y + row * scale,
                            scale, scale, int(pixel, 16))
-    step = 2 if moving and frame % 16 < 8 else 0
-    pyxel.rect(x + 5 * scale, y + 15 * scale, 2 * scale, 3 * scale, 3)
-    pyxel.rect(x + 9 * scale, y + (15 - step) * scale,
-               2 * scale, 3 * scale, 3)
-    pyxel.rect(x + 3 * scale, y + 18 * scale, 4 * scale, 2 * scale, 0)
-    pyxel.rect(x + 9 * scale, y + (18 - step) * scale,
-               4 * scale, 2 * scale, 0)
 
 
 def heart(x, y, filled=True):

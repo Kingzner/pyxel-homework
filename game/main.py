@@ -403,7 +403,9 @@ class Game:
         if self.invulnerable and self.visual_frames % 8 < 4 and self.state == "playing":
             return
         art.character(self.player_x, PLAYER_Y, self.frames,
-                      self.moving and self.state == "playing", self.facing)
+                      self.moving and self.state == "playing", self.facing,
+                      expression="hurt" if self.invulnerable else
+                      "dash" if self.dashing else "normal")
         if self.shield:
             art.shield_ring(self.player_x, PLAYER_Y, self.visual_frames)
         if self.dashing:
@@ -443,7 +445,7 @@ class Game:
         art.big_text("DODGE", 66, 7)
         art.big_text("HOMEWORK", 85, 10)
         pyxel.line(47, 107, 272, 107, 3)
-        art.character(48, 123 + math.sin(self.visual_frames / 25),
+        art.character(56, 140 + math.sin(self.visual_frames / 25),
                       self.visual_frames, True, scale=2)
         for index, mode in enumerate(("arcade", "cozy")):
             x = 113 + index * 81
@@ -453,7 +455,7 @@ class Game:
             art.center_text(127, f"{index + 1} {MODES[mode]['name']}",
                             7 if selected else 6, x + 37)
         art.center_text(150, "SPACE TO START", 10, 192)
-        art.center_text(164, "3 HEARTS. ONE MORE TRY.", 6, 192)
+        art.center_text(164, "SENA / NIGHT SHIFT", 6, 192)
         art.center_text(185, "COLLECT SHIELDS. DODGE DEADLINES.", 6)
 
     def draw_pause(self):
