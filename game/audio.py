@@ -5,7 +5,7 @@ import pyxel
 
 class Audio:
     EFFECTS = {"start": 2, "dash": 3, "pickup": 4, "shield": 5,
-               "hit": 6, "over": 7, "wave": 8}
+               "hit": 6, "over": 7, "wave": 8, "shot": 9, "win": 10}
 
     def __init__(self, muted=False):
         self.muted = muted
@@ -22,11 +22,15 @@ class Audio:
         pyxel.sounds[6].set("c1c1g0r", "n", "4210", "fffn", 6)
         pyxel.sounds[7].set("g2e2c2g1c1", "t", "33221", "f", 12)
         pyxel.sounds[8].set("c3g3c4", "t", "221", "f", 8)
+        pyxel.sounds[9].set("c3g3", "p", "11", "ff", 2)
+        pyxel.sounds[10].set("c3e3g3c4rg3c4", "t", "3322111", "n", 10)
+        pyxel.sounds[11].set("c2rc2g2 c2rc2g2 d2rd2a2 d2rd2a2", "p", "1", "f", 12)
+        pyxel.sounds[12].set("c1rc1r g0rg0r c1rc1r g0rg0r", "t", "1", "f", 24)
 
-    def music(self):
+    def music(self, boss=False):
         if not self.muted:
-            pyxel.play(0, 0, loop=True)
-            pyxel.play(1, 1, loop=True)
+            pyxel.play(0, 11 if boss else 0, loop=True)
+            pyxel.play(1, 12 if boss else 1, loop=True)
 
     def effect(self, name):
         if not self.muted:
@@ -36,8 +40,8 @@ class Audio:
     def stop(self):
         pyxel.stop()
 
-    def toggle(self, music_active=True):
+    def toggle(self, music_active=True, boss=False):
         self.muted = not self.muted
         self.stop()
         if music_active:
-            self.music()
+            self.music(boss)

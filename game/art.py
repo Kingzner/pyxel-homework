@@ -55,6 +55,13 @@ PIGTAIL = (
     "0dd0", "0dd0", "0dd0", "0dd0", ".0d0", ".0d0", "..00",
 )
 
+SKIN_COLORS = {
+    "sena": {},
+    "mint": {"d": "3", "c": "b", "8": "9", "7": "f"},
+    "luna": {"d": "6", "c": "7", "7": "2", "8": "b"},
+    "crimson": {"d": "8", "c": "e", "7": "0", "8": "a"},
+}
+
 # 5 × 7 字体，用于标题。普通说明继续使用 Pyxel 自带的小字体。
 GLYPHS = {
     "A": (14, 17, 17, 31, 17, 17, 17),
@@ -132,7 +139,7 @@ def panel(x, y, width, height, color=0, border=3):
     pyxel.pset(x + width - 2, y + 1, 6)
 
 
-def character_pixels(frame=0, moving=False, facing=1, expression="normal"):
+def character_pixels(frame=0, moving=False, facing=1, expression="normal", skin="sena"):
     """合成一帧像素，用同一份数据绘制游戏角色和放大预览。"""
     canvas = [["."] * 24 for _ in range(32)]
     sway = int((frame // (10 if moving else 45)) % 2 == 1)
@@ -180,16 +187,26 @@ def character_pixels(frame=0, moving=False, facing=1, expression="normal"):
 
     if facing < 0:
         canvas = [row[::-1] for row in canvas]
+    colors = SKIN_COLORS.get(skin, {})
+    for y, row in enumerate(canvas):
+        for x, pixel in enumerate(row):
+            face = 4 <= x < 20 and 5 <= y <= 14
+            if face and pixel in ("e", "8", "7"):
+                continue
+            if face and pixel == "c":
+                canvas[y][x] = {"mint": "b", "luna": "d", "crimson": "8"}.get(skin, "c")
+            else:
+                canvas[y][x] = colors.get(pixel, pixel)
     return tuple("".join(row) for row in canvas)
 
 
-def character(x, y, frame=0, moving=False, facing=1, scale=1, expression="normal"):
+def character(x, y, frame=0, moving=False, facing=1, scale=1, expression="normal", skin="sena"):
     # x、y 仍使用原有 16 × 20 的角色定位。较大的头发、脸部向上扩展。
     # 角色脚底对齐地面；玩法中的身体碰撞区域由 main.py 单独决定。
     origin_x = x - 4 * scale
     bob = int(moving and frame % 12 < 6)
     origin_y = y - (12 + bob) * scale
-    for row, strip in enumerate(character_pixels(frame, moving, facing, expression)):
+    for row, strip in enumerate(character_pixels(frame, moving, facing, expression, skin)):
         for col, pixel in enumerate(strip):
             if pixel != ".":
                 pyxel.rect(origin_x + col * scale, origin_y + row * scale,
@@ -283,3 +300,29 @@ def shield_ring(x, y, frame):
     pyxel.circb(x + 8, y + 10, radius, 11)
     pyxel.pset(x + 19, y, 7)
     pyxel.pset(x - 4, y + 17, 7)
+
+
+def dean(center, y, frame=0, flash=False):
+    """原创 Boss：戴眼镜、拿试卷的期末院长。"""
+    x = center - 24
+    bob = math.sin(frame / 16) * 2
+    y += bob
+    pyxel.rect(x + 2, y + 5, 44, 34, 0)
+    pyxel.rect(x + 9, y + 1, 30, 6, 6)
+    pyxel.rect(x + 7, y + 5, 34, 8, 7 if flash else 5)
+    pyxel.rect(x + 12, y + 12, 24, 13, 14)
+    pyxel.rect(x + 10, y + 13, 12, 7, 0)
+    pyxel.rect(x + 26, y + 13, 12, 7, 0)
+    pyxel.rect(x + 12, y + 15, 8, 3, 12)
+    pyxel.rect(x + 28, y + 15, 8, 3, 12)
+    pyxel.line(x + 22, y + 16, x + 26, y + 16, 0)
+    pyxel.rect(x + 21, y + 22, 6, 2, 8)
+    pyxel.rect(x + 7, y + 27, 34, 13, 7 if flash else 13)
+    pyxel.tri(x + 12, y + 27, x + 24, y + 27, x + 21, y + 34, 7)
+    pyxel.tri(x + 24, y + 27, x + 36, y + 27, x + 27, y + 34, 7)
+    pyxel.rect(x + 23, y + 31, 3, 8, 8)
+    pyxel.rect(x - 3, y + 35, 55, 12, 0)
+    pyxel.rect(x - 1, y + 34, 51, 10, 7)
+    pyxel.line(x + 24, y + 34, x + 24, y + 43, 5)
+    pyxel.text(x + 3, y + 36, "FINAL", 8)
+    pyxel.text(x + 29, y + 36, "EXAM", 8)
