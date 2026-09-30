@@ -302,7 +302,7 @@ def shield_ring(x, y, frame):
     pyxel.pset(x - 4, y + 17, 7)
 
 
-def dean(center, y, frame=0, flash=False):
+def dean(center, y, frame=0, flash=False, chinese_font=None):
     """原创 Boss：戴眼镜、拿试卷的期末院长。"""
     x = center - 24
     bob = math.sin(frame / 16) * 2
@@ -324,5 +324,9 @@ def dean(center, y, frame=0, flash=False):
     pyxel.rect(x - 3, y + 35, 55, 12, 0)
     pyxel.rect(x - 1, y + 34, 51, 10, 7)
     pyxel.line(x + 24, y + 34, x + 24, y + 43, 5)
-    pyxel.text(x + 3, y + 36, "FINAL", 8)
-    pyxel.text(x + 29, y + 36, "EXAM", 8)
+    if chinese_font:
+        pyxel.text(x + 2, y + 34, "期末", 8, chinese_font)
+        pyxel.text(x + 27, y + 34, "考试", 8, chinese_font)
+    else:
+        pyxel.text(x + 3, y + 36, "FINAL", 8)
+        pyxel.text(x + 29, y + 36, "EXAM", 8)

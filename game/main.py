@@ -11,14 +11,14 @@ import random
 
 import pyxel
 
-from game import art, storage, screens
+from game import art, i18n, storage, screens
 from game.audio import Audio
 from game.boss import Boss
 from game.progression import SKINS, unlock
-from game.upgrades import UPGRADES, draw_choices
+from game.upgrades import draw_choices
 from game.config import (
     DASH_COOLDOWN, DASH_FRAMES, DASH_SPEED, FLOOR_Y, FPS, HEIGHT,
-    HIT_GRACE_FRAMES, MAX_WAVE, MODES, MOVE_SPEED, PLAYER_HEIGHT,
+    HIT_GRACE_FRAMES, MAX_WAVE, MODES, MOVE_SPEED,
     PLAYER_WIDTH, PLAYER_Y, START_LIVES, WAVE_SECONDS, WIDTH,
     ADVENTURE_BOSS_SECONDS, UPGRADE_SECONDS, DEMO_BOSS_SECONDS, DEMO_UPGRADE_SECONDS,
 )
@@ -69,10 +69,12 @@ class Game:
     def __init__(self, initial_mode="arcade"):
         self.data = storage.load()
         self.rng = random.Random()
-        pyxel.init(WIDTH, HEIGHT, title="Dodge Homework v0.4 | Midnight Study Club",
+        pyxel.init(WIDTH, HEIGHT, title="Dodge Homework v0.5 | Midnight Study Club",
                    fps=FPS, display_scale=3, quit_key=pyxel.KEY_NONE)
         pyxel.colors[:] = art.PALETTE
+        i18n.init_fonts()
         self.audio = Audio(self.data["muted"])
+        self.language = self.data["language"]
         self.mode = initial_mode
         self.skin = self.data["selected"]
         self.wardrobe_focus = list(SKINS).index(self.skin)
@@ -94,7 +96,6 @@ class Game:
         self.bonus_score = 0
         self.dodged = 0
         self.notes = 0
-        self.lives = START_LIVES
         self.max_lives = 2 if self.mode == "exam" else 5 if self.mode == "demo" else START_LIVES
         self.lives = self.max_lives
         self.shield = self.mode == "demo"
@@ -112,7 +113,8 @@ class Game:
         self.labels = []
         self.shake = 0
         self.banner_frames = 0
-        self.notice = "SPACE: DASH THROUGH DANGER"
+        self.notice = "dash_tip"
+        self.notice_values = {}
         self.notice_frames = FPS * 5
         self.new_record = False
         self.record_at_start = self.data["best"].get(self.mode, 0)
@@ -127,7 +129,7 @@ class Game:
         self.shot_cooldown = 0
         self.notes_saved = 0
         self.new_unlocks = []
-        self.failure_reason = "HIT BY HOMEWORK"
+        self.failure_reason = "hit_by_homework"
         self.clear_registered = False
         self.pause_return = "playing"
 
@@ -150,6 +152,7 @@ class Game:
                 if skin not in self.new_unlocks:
                     self.new_unlocks.append(skin)
         self.data["muted"] = self.audio.muted
+        self.data["language"] = self.language
         self.save_ok = storage.save(self.data)
 
     def menu(self):
@@ -221,7 +224,8 @@ class Game:
         key = self.upgrade_cards[index]
         self.skills.append(key)
         self.dash_cooldown = min(self.dash_cooldown, self.dash_cooldown_limit())
-        self.notice = f"UPGRADE: {UPGRADES[key].name}"
+        self.notice = "upgrade_notice"
+        self.notice_values = {"name": key}
         self.notice_frames = FPS * 3
         if self.loadout:
             if len(self.skills) < 3:
@@ -255,7 +259,8 @@ class Game:
         self.state = "boss_intro"
         self.intro_frames = 110
         self.banner_frames = 0
-        self.notice = "HOLD Z: ANSWER THE DEAN"
+        self.notice = "boss_tip"
+        self.notice_values = {}
         self.notice_frames = FPS * 5
         self.next_note = self.frames + FPS * 3
         self.next_shield = self.frames + FPS * (10 if self.mode == "exam" else 6)
@@ -270,13 +275,16 @@ class Game:
         return max(45, int(DASH_COOLDOWN * factor))
 
     def update(self):
+        if pyxel.btnp(pyxel.KEY_L):
+            self.language = "en" if self.language == "zh" else "zh"
+            self.persist()
         if pyxel.btnp(pyxel.KEY_Q):
             self.persist()
             pyxel.quit()
             return
         if pyxel.btnp(pyxel.KEY_M):
-            self.audio.toggle(self.state in ("title", "playing", "boss_intro", "wardrobe"),
-                              self.boss is not None)
+            self.audio.toggle(self.state in ("title", "playing", "boss_intro", "wardrobe", "ending"),
+                              self.boss is not None and self.state != "ending")
             self.persist()
 
         if self.state != "paused":
@@ -305,14 +313,17 @@ class Game:
             self.update_upgrade()
             return
 
-        if self.state in ("game_over", "victory"):
+        if self.state in ("game_over", "victory", "ending"):
             if pyxel.btnp(pyxel.KEY_R) or pyxel.btnp(pyxel.KEY_SPACE):
                 self.start_game()
-            elif pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_ESCAPE):
-                self.menu()
-            elif pyxel.btnp(pyxel.KEY_C):
+            elif self.state == "victory" and pyxel.btnp(pyxel.KEY_RETURN):
+                self.state = "ending"
+                self.audio.music()
+            elif self.state != "ending" and pyxel.btnp(pyxel.KEY_C):
                 self.menu()
                 self.state = "wardrobe"
+            elif pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.KEY_ESCAPE):
+                self.menu()
             return
 
         if self.state == "paused":
@@ -358,7 +369,8 @@ class Game:
             self.wave = new_wave
             self.banner_frames = FPS * 2
             self.audio.effect("wave")
-            self.notice = "DEADLINES ARE GETTING CLOSER!"
+            self.notice = "wave_tip"
+            self.notice_values = {}
             self.notice_frames = FPS * 2
 
         if self.boss:
@@ -375,7 +387,7 @@ class Game:
                 self.finish(True)
                 return
             if self.boss.seconds_left <= 0:
-                self.failure_reason = "EXAM TIME LIMIT REACHED"
+                self.failure_reason = "time_up"
                 self.finish()
                 return
             self.spawn_pickups()
@@ -514,7 +526,7 @@ class Game:
                     self.dodged += 1
                     self.bonus_score += 10
                     self.burst(item.x + 6, item.y + 6, 11, 10)
-                    self.label("DASH +10", self.player_x + 8, PLAYER_Y - 12, 11)
+                    self.label("dash_score", self.player_x + 8, PLAYER_Y - 12, 11)
                     self.items.remove(item)
                     if "recycle" in self.skills:
                         self.items.append(FallingItem("note", item.x, item.y, 1.2, 12, 13))
@@ -535,7 +547,7 @@ class Game:
                               item.x - self.player_x - PLAYER_WIDTH + 3, 0)
                     if gap < 14:
                         self.bonus_score += 5
-                        self.label("CLOSE! +5", self.player_x + 8, PLAYER_Y - 10, 10)
+                        self.label("close_score", self.player_x + 8, PLAYER_Y - 10, 10)
                     self.burst(item.x + item.width / 2, FLOOR_Y + 3, 6, 4)
                 self.items.remove(item)
 
@@ -544,12 +556,12 @@ class Game:
         if item.kind == "shield":
             self.bonus_score += 35 if self.shield else 15
             self.shield = True
-            self.label("SHIELD ON", self.player_x + 8, PLAYER_Y - 12, 11)
+            self.label("shield_label", self.player_x + 8, PLAYER_Y - 12, 11)
             self.burst(item.x + 6, item.y + 6, 11, 16)
         else:
             self.bonus_score += 25
             self.notes += 1
-            self.label("NOTE +25", self.player_x + 8, PLAYER_Y - 12, 10)
+            self.label("note_score", self.player_x + 8, PLAYER_Y - 12, 10)
             self.burst(item.x + 5, item.y + 5, 10, 10)
 
     def hit(self):
@@ -557,7 +569,7 @@ class Game:
             self.shield = False
             self.invulnerable = FPS
             self.burst(self.player_x + 8, PLAYER_Y + 10, 11, 24)
-            self.label("SAVED BY SHIELD", self.player_x + 8, PLAYER_Y - 14, 11)
+            self.label("shield_saved", self.player_x + 8, PLAYER_Y - 14, 11)
             self.audio.effect("shield")
             self.shake = 2
             if "burst" in self.skills:
@@ -587,11 +599,11 @@ class Game:
             ))
         self.particles = self.particles[-160:]
 
-    def label(self, text, x, y, color):
+    def label(self, key, x, y, color):
         # 长文字靠近边缘时仍完整留在画面中。
-        half_width = len(text) * 2
+        half_width = i18n.width(self.language, i18n.tr(self.language, key)) / 2
         x = max(half_width + 4, min(x, WIDTH - half_width - 4))
-        self.labels.append(FloatingText(text, x, y, color))
+        self.labels.append(FloatingText(key, x, y, color))
 
     def update_effects(self):
         self.shake = max(0, self.shake - 0.3)
@@ -613,8 +625,9 @@ class Game:
             pyxel.camera(math.sin(self.visual_frames * 2) * self.shake,
                          math.cos(self.visual_frames * 3) * self.shake / 2)
         art.classroom(self.visual_frames)
-        if self.boss:
-            art.dean(self.boss.x, 57, self.visual_frames, self.boss.flash > 0)
+        if self.boss and self.state != "ending":
+            art.dean(self.boss.x, 57, self.visual_frames, self.boss.flash > 0,
+                     i18n.FONT_SMALL if self.language == "zh" else None)
         self.draw_items()
         for shot in self.shots:
             pyxel.rect(shot.x - 1, shot.y, 3, 7, 11)
@@ -624,9 +637,13 @@ class Game:
             size = 2 if particle.life > 12 else 1
             pyxel.rect(particle.x, particle.y, size, size, particle.color)
         for label in self.labels:
-            art.center_text(label.y, label.text, label.color, label.x)
+            message = i18n.tr(self.language, label.text)
+            half_width = i18n.width(self.language, message) / 2
+            x = max(half_width + 4, min(label.x, WIDTH - half_width - 4))
+            i18n.center(label.y, message, label.color, self.language, x)
         pyxel.camera()
-        self.draw_hud()
+        if self.state != "ending":
+            self.draw_hud()
 
         if self.state == "title":
             screens.title(self)
@@ -640,11 +657,15 @@ class Game:
             screens.pause(self)
         elif self.state in ("game_over", "victory"):
             screens.results(self)
+        elif self.state == "ending":
+            screens.ending(self)
         elif self.banner_frames > FPS:
             y = 114 if self.boss else 48
             art.panel(119, y, 82, 23)
-            art.center_text(y + 9, f"PHASE {self.boss.phase}" if self.boss else
-                            f"WAVE {self.wave:02d}", 10)
+            key = "phase" if self.boss else "wave"
+            message = i18n.tr(self.language, key, **({"phase": self.boss.phase}
+                              if self.boss else {"wave": self.wave}))
+            i18n.center(y + 7, message, 10, self.language)
 
     def draw_items(self):
         for item in self.items:
@@ -679,41 +700,57 @@ class Game:
                        self.player_x - self.dash_direction * 14, PLAYER_Y + 8, 11)
 
     def draw_hud(self):
+        language = self.language
         art.panel(12, 7, 296, 28, 0, 3)
-        pyxel.text(20, 11, "SCORE", 5)
+        i18n.text(20, 9, i18n.tr(language, "score"), 5, language)
         pyxel.text(20, 23, f"{self.score:05d}", 7)
-        pyxel.text(92, 11, "BEST", 5)
+        i18n.text(92, 9, i18n.tr(language, "best"), 5, language)
         pyxel.text(92, 23, f"{max(self.score, self.data['best'].get(self.mode, 0)):05d}", 10)
-        pyxel.text(169, 11, f"P{self.boss.phase} {self.boss.seconds_left}s" if self.boss else
-                   f"WAVE {self.wave:02d}", 8 if self.boss else 6)
-        pyxel.text(169, 23, MODES[self.mode]["name"], 11)
+        if self.boss:
+            progress = i18n.tr(language, "boss_time", phase=self.boss.phase,
+                               seconds=self.boss.seconds_left)
+        elif self.mode == "exam":
+            progress = i18n.tr(language, "boss_next")
+        else:
+            deadline = DEMO_BOSS_SECONDS if self.mode == "demo" else ADVENTURE_BOSS_SECONDS
+            remaining = max(0, deadline - self.frames // FPS)
+            progress = i18n.tr(language, "boss_eta", seconds=remaining)
+        i18n.text(163, 9, progress, 8 if self.boss else 6, language)
+        i18n.text(163, 23, i18n.mode_name(language, self.mode), 11, language)
         for index in range(self.max_lives):
             art.heart(WIDTH - 19 - self.max_lives * 13 + index * 13,
                       16, index < self.lives)
 
         if self.boss:
             pyxel.rect(12, 39, 296, 17, 0)
-            pyxel.text(18, 41, f"DEAN / {self.boss.name}", 6)
+            boss_name = i18n.phase_name(language, self.boss)
+            i18n.text(18, 39, i18n.tr(language, "boss_name", name=boss_name), 6, language)
             pyxel.text(250, 41, f"{self.boss.hp}/{self.boss.max_hp}", 8)
             pyxel.rect(18, 50, 284, 4, 3)
             pyxel.rect(18, 50, 284 * self.boss.hp / self.boss.max_hp, 4, 8)
 
         pyxel.rect(0, 208, WIDTH, 15, 2)
-        pyxel.text(12, 213, "DASH", 6)
-        pyxel.rect(34, 213, 45, 5, 0)
+        i18n.text(12, 210, i18n.tr(language, "dash"), 6, language)
+        pyxel.rect(45, 213, 34, 5, 0)
         ready = max(0, min(1, 1 - self.dash_cooldown / self.dash_cooldown_limit()))
-        pyxel.rect(35, 214, 43 * ready, 3, 11 if ready == 1 else 3)
-        pyxel.text(251, 213, "SHIELD ON" if self.shield else "NO SHIELD",
-                   11 if self.shield else 5)
+        pyxel.rect(46, 214, 32 * ready, 3, 11 if ready == 1 else 3)
+        i18n.text(247, 210, i18n.tr(language, "shield_on" if self.shield else "shield_off"),
+                  11 if self.shield else 5, language)
         if self.notice_frames and self.state == "playing":
-            art.center_text(213, self.notice, 10, 164)
+            values = {}
+            if self.notice == "upgrade_notice":
+                values["name"] = i18n.upgrade_name(language, self.notice_values["name"])
+            i18n.center(210, i18n.tr(language, self.notice, **values), 10, language, 163)
         else:
-            build = "/".join(UPGRADES[key].tag for key in self.skills)
-            art.center_text(213, build or "MIDNIGHT STUDY CLUB", 12 if build else 5, 164)
-        pyxel.text(12, 229, "A/D MOVE  SPACE DASH  Z FIRE", 6)
-        pyxel.text(174, 229, "P PAUSE", 5)
-        pyxel.text(220, 229, "M:OFF" if self.audio.muted else "M:ON", 5)
-        pyxel.text(282, 229, "Q EXIT", 5)
+            build = "/".join(i18n.upgrade_tag(language, key) for key in self.skills)
+            i18n.center(210, build or i18n.tr(language, "club"),
+                        12 if build else 5, language, 163)
+        i18n.text(8, 227, i18n.tr(language, "hud_controls"), 6, language)
+        i18n.text(170, 227, i18n.tr(language, "pause_short"), 5, language)
+        i18n.text(209, 227, i18n.tr(language, "mute_on" if self.audio.muted else "mute_off"),
+                  5, language)
+        i18n.text(248, 227, "L语言" if language == "zh" else "L LANG", 11, language)
+        i18n.text(286, 227, i18n.tr(language, "exit"), 5, language)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dodge Homework / Midnight Study Club")

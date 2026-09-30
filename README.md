@@ -21,6 +21,8 @@
 - 普通冒险、轻松冒险、直接高难 Boss，以及快速展示四种模式。
 - 四套原创配色外观，通过收集笔记、通关和高难通关解锁。
 - 开始画面、衣橱、暂停、重开、静音，以及本机成绩和成就存档。
+- 完整通关链路：三次升级 → 三阶段 Boss → 胜利结算 → 剧情结局；失败可立即重试。
+- 游戏内中英文实时切换，语言偏好随本机存档保存；内置开源中文字库。
 - 完整代码在 `game/`；原有课程仍可按下表独立启动。
 
 | 按键 | 操作 |
@@ -36,11 +38,15 @@
 | 展示模式 N | 推进至下一次升级，三项选完后进入 Boss |
 | P / Esc | 暂停或继续 |
 | M | 音乐与音效开关 |
+| L | 随时切换中文 / English；重启后保留选择 |
 | 结束后 R / 空格 | 再来一局 |
-| 暂停或结束后 Enter | 返回主菜单 |
+| 胜利结算 Enter | 阅读结局；结局画面 Enter 返回主菜单 |
+| 失败结算或暂停 Enter | 返回主菜单 |
 | Q | 保存并退出 |
 
 第一次体验可以按 **2 → 空格**，从轻松模式开始。
+
+通关路线：普通/轻松模式存活到第 **20、40、60 秒**各选择一项能力；第 **90 秒**进入期末院长战。按住 **Z** 持续反击，在倒计时归零前打空 Boss 生命值。胜利后查看成绩、解锁内容，再按 **Enter** 看结局。高难模式会直接进入三项能力选择和 Boss 战；展示模式可按 **N** 快速推进。
 
 [完整玩法与后续学习路线](docs/finished-game.md) · [版本记录](CHANGELOG.md)
 
@@ -90,3 +96,7 @@ python3.12 -m venv .venv
 - [官方示例](https://kitao.github.io/pyxel/web/showcase/)
 
 本项目的教学代码是为本次学习编写的。
+
+游戏中文字使用 [Noto Sans CJK SC](https://github.com/notofonts/noto-cjk) 的精简字体，依 [SIL Open Font License 1.1](assets/fonts/OFL.txt) 随项目分发；不依赖 macOS 系统字体。
+
+若以后在 `game/i18n.py` 增加新的中文字，先从官方仓库取得 `NotoSansCJKsc-Regular.otf`，在构建环境安装 `fonttools`，然后运行 `.venv/bin/python -m tools.build_font /path/to/NotoSansCJKsc-Regular.otf` 更新精简字库。运行游戏本身只需 `requirements.txt` 中的 Pyxel。

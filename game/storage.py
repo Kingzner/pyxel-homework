@@ -11,8 +11,8 @@ SAVE_PATH = Path(__file__).resolve().parents[1] / "data" / "save.json"
 
 def load():
     result = {
-        "version": 2, "best": {"arcade": 0, "cozy": 0, "exam": 0},
-        "muted": False, "owned": ["sena"], "selected": "sena",
+        "version": 3, "best": {"arcade": 0, "cozy": 0, "exam": 0},
+        "muted": False, "language": "zh", "owned": ["sena"], "selected": "sena",
         "stats": {"notes": 0, "clears": 0, "hard_clears": 0},
     }
     try:
@@ -28,6 +28,8 @@ def load():
                         result[field][key] = value
         if type(raw.get("muted")) is bool:
             result["muted"] = raw["muted"]
+        if raw.get("language") in ("zh", "en"):
+            result["language"] = raw["language"]
         owned = raw.get("owned", [])
         if isinstance(owned, list):
             result["owned"] = [key for key in SKINS if key == "sena" or key in owned]
@@ -51,6 +53,7 @@ def save(data):
         current["owned"] = [key for key in SKINS if key in current["owned"] or key in data["owned"]]
         current["selected"] = data["selected"] if data["selected"] in current["owned"] else "sena"
         current["muted"] = data["muted"]
+        current["language"] = data["language"]
         unlock(current)
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8", dir=SAVE_PATH.parent,
