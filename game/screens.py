@@ -48,6 +48,21 @@ def title(game):
     center(game, 204, "language", 11)
 
 
+def help_screen(game):
+    dim()
+    art.panel(20, 40, 280, 175, 0, 11)
+    i18n.big(49, t(game, "help_title"), 11, game.language)
+    pyxel.line(40, 77, 280, 77, 3)
+    goal = {"exam": "help_goal_exam", "demo": "help_goal_demo"}.get(game.mode, "help_goal")
+    center(game, 88, goal, 10)
+    center(game, 106, "help_move", 7)
+    center(game, 124, "help_attack", 7)
+    center(game, 142, "help_focus", 11)
+    center(game, 160, "help_boss", 7)
+    center(game, 184, "help_back", 5)
+    center(game, 202, "language", 11)
+
+
 def upgrade(game):
     dim()
     center(game, 43, "loadout" if game.loadout else "upgrade", 11,
@@ -109,9 +124,11 @@ def pause(game):
 
 def results(game):
     won = game.state == "victory"
-    art.panel(26, 45, 268, 160, 0, 11 if won else 8)
-    i18n.big(55, t(game, "cleared" if won else "game_over"),
+    art.panel(26, 39, 268, 178, 0, 11 if won else 8)
+    i18n.big(48, t(game, "cleared" if won else "game_over"),
              11 if won else 8, game.language)
+    if game.new_record and game.mode != "demo":
+        i18n.text(250, 56, t(game, "new_best"), 10, game.language)
     if game.mode == "demo":
         subtitle = t(game, "demo_cleared" if won else "demo_failed")
     elif won:
@@ -119,27 +136,30 @@ def results(game):
         subtitle = t(game, "rank" if game.mode == "exam" else "adventure_rank", rank=rank)
     else:
         subtitle = t(game, game.failure_reason)
-    i18n.center(79, subtitle, 10, game.language)
-    art.big_text(f"{game.score:05d}", 94, 7)
-    center(game, 114, "run_stats", 6, seconds=game.frames // FPS,
+    i18n.center(73, subtitle, 10, game.language)
+    art.big_text(f"{game.score:05d}", 88, 7)
+    center(game, 108, "run_stats", 6, seconds=game.frames // FPS,
            dodged=game.dodged, notes=game.notes)
     build = " / ".join(i18n.upgrade_tag(game.language, key) for key in game.skills)
-    center(game, 128, "build", 12, build=build or t(game, "no_upgrades"))
+    center(game, 123, "build", 12, build=build or t(game, "no_upgrades"))
+    center(game, 138, "combat_stats", 10,
+           chain=game.combat.best_chain, bursts=game.combat.bursts,
+           destroyed=game.destroyed)
     if game.new_unlocks:
         names = "、".join(i18n.skin_name(game.language, key) for key in game.new_unlocks)
-        center(game, 143, "unlocked", 11, skins=names)
+        center(game, 153, "unlocked", 11, skins=names)
     elif game.mode == "demo":
-        center(game, 143, "all_outfits", 10)
+        center(game, 153, "all_outfits", 10)
     else:
-        center(game, 143, "best_mode", 10,
+        center(game, 153, "best_mode", 10,
                best=game.data["best"].get(game.mode, 0),
                mode=i18n.mode_name(game.language, game.mode))
-    pyxel.rect(68, 157, 184, 18, 3)
-    pyxel.rectb(68, 157, 184, 18, 11)
-    center(game, 161 if game.language == "zh" else 163, "try_again", 7)
-    center(game, 186, "result_win_controls" if won else "result_lose_controls", 5)
+    pyxel.rect(68, 168, 184, 18, 3)
+    pyxel.rectb(68, 168, 184, 18, 11)
+    center(game, 172 if game.language == "zh" else 174, "try_again", 7)
+    center(game, 198, "result_win_controls" if won else "result_lose_controls", 5)
     if not game.save_ok:
-        center(game, 207, "save_failed", 8)
+        center(game, 222, "save_failed", 8)
 
 
 def ending(game):
@@ -152,7 +172,8 @@ def ending(game):
     if game.mode == "demo":
         center(game, 111, "ending_demo", 7, 198)
     else:
-        center(game, 95, "ending_1", 7, 198)
-        center(game, 117, "ending_2", 10, 198)
-        center(game, 139, "ending_3", 11, 198)
+        suffix = "hard_" if game.mode == "exam" else ""
+        center(game, 95, f"ending_{suffix}1", 7, 198)
+        center(game, 117, f"ending_{suffix}2", 10, 198)
+        center(game, 139, f"ending_{suffix}3", 11, 198)
     center(game, 181, "ending_controls", 6)

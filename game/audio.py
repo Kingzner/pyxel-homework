@@ -5,7 +5,8 @@ import pyxel
 
 class Audio:
     EFFECTS = {"start": 2, "dash": 3, "pickup": 4, "shield": 5,
-               "hit": 6, "over": 7, "wave": 8, "shot": 9, "win": 10}
+               "hit": 6, "over": 7, "wave": 8, "shot": 9, "win": 10,
+               "paper": 13, "focus": 14}
 
     def __init__(self, muted=False):
         self.muted = muted
@@ -26,6 +27,8 @@ class Audio:
         pyxel.sounds[10].set("c3e3g3c4rg3c4", "t", "3322111", "n", 10)
         pyxel.sounds[11].set("c2rc2g2 c2rc2g2 d2rd2a2 d2rd2a2", "p", "1", "f", 12)
         pyxel.sounds[12].set("c1rc1r g0rg0r c1rc1r g0rg0r", "t", "1", "f", 24)
+        pyxel.sounds[13].set("g4e4c4", "p", "221", "fff", 4)
+        pyxel.sounds[14].set("c3e3g3c4e4", "t", "33221", "nnnff", 8)
 
     def music(self, boss=False):
         if not self.muted:

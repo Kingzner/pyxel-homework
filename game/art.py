@@ -252,30 +252,39 @@ def pickup(x, y, kind, frame=0):
         pyxel.pset(x + 3, y + 6, 7)
 
 
-def classroom(frame=0):
+def classroom(frame=0, mood="night"):
+    sky = 4 if mood == "dawn" else 0 if mood == "boss" else 2
+    accent = 9 if mood == "dawn" else 8 if mood == "boss" else 6
     pyxel.cls(1)
     pyxel.rect(0, 0, 320, 39, 0)
     pyxel.line(0, 38, 319, 38, 3)
     # 三扇夜色窗户，窗外是星星与远处楼房。
     for index, x in enumerate((16, 120, 224)):
         pyxel.rect(x - 3, 43, 86, 115, 0)
-        pyxel.rect(x, 46, 80, 108, 2)
+        pyxel.rect(x, 46, 80, 108, sky)
         for star in range(9):
             sx = x + 5 + (star * 17 + index * 7) % 68
             sy = 53 + (star * 13 + index * 11) % 68
-            color = 6 if (frame // 45 + star) % 4 == 0 else 3
-            pyxel.pset(sx, sy, color)
+            if mood != "dawn":
+                color = accent if (frame // 45 + star) % 4 == 0 else 3
+                pyxel.pset(sx, sy, color)
         for building in range(6):
             bx = x + building * 13
             bh = 12 + (building * 11 + index * 5) % 24
-            pyxel.rect(bx, 154 - bh, 11, bh, 1)
+            pyxel.rect(bx, 154 - bh, 11, bh, 2 if mood == "dawn" else 1)
             pyxel.pset(bx + 3, 158 - bh, 9)
             pyxel.pset(bx + 7, 164 - bh, 3)
         pyxel.rect(x + 38, 46, 3, 108, 3)
         pyxel.rect(x, 100, 80, 3, 3)
         pyxel.rect(x - 5, 154, 90, 4, 3)
-    pyxel.circ(67, 69, 10, 6)
-    pyxel.circ(71, 65, 9, 2)
+    pyxel.circ(67, 69, 10, accent)
+    if mood == "night":
+        pyxel.circ(71, 65, 9, sky)
+    elif mood == "boss":
+        pyxel.circb(67, 69, 13 + (frame // 12) % 2, 8)
+    else:
+        for dx, dy in ((-16, 0), (16, 0), (0, -16), (0, 16)):
+            pyxel.line(67 + dx // 2, 69 + dy // 2, 67 + dx, 69 + dy, 10)
     # 书架与暖色书脊。
     pyxel.rect(0, 169, 320, 24, 0)
     for index in range(40):
@@ -287,7 +296,7 @@ def classroom(frame=0):
     pyxel.rect(0, 190, 320, 4, 4)
     pyxel.rect(0, 194, 320, 8, 2)
     pyxel.rect(0, 202, 320, 21, 2)
-    pyxel.line(0, 202, 319, 202, 6)
+    pyxel.line(0, 202, 319, 202, accent)
     for x in range(0, 320, 32):
         pyxel.line(x, 204, x - 8, 222, 3)
     pyxel.line(0, 213, 319, 213, 3)
