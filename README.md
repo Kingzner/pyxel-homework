@@ -1,6 +1,12 @@
 # Midnight Study Club｜躲避作业
 
-原创像素动作游戏与客户端开发作品集原型。**[作品集讲解与技术拆解](docs/portfolio.md)** · [一分钟展示路线](docs/showcase.md)
+一款可玩的原创像素动作游戏：躲避作业、组合能力，挑战三阶段期末 Boss。
+
+![游戏画面剪辑：标题、战斗、能力选择、Boss 与结局](assets/showcase.gif)
+
+*固定种子演示片段，由游戏自身绘制并剪辑为约 10 秒预览；[生成方式](docs/showcase.md#仓库首页动图)。*
+
+**[开始游戏](#开始游戏)** · **[作品集技术拆解](docs/portfolio.md)** · **[一分钟展示路线](docs/showcase.md)**
 
 ## 开始游戏
 
